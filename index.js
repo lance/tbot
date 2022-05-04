@@ -1,4 +1,15 @@
 const { CloudEvent, HTTP } = require('cloudevents');
+const axios = require('axios');
+
+const token = process.env.API_KEY;
+const url = `https://api.telegram.org/bot${token}`;
+const updates = `${url}/getUpdates`;
+const sendMessage = `${url}/sendMessage`;
+
+// Sanity check - we can't do anything without an API token
+if (!token) {
+  throw new Error('No $API_KEY found.');
+}
 
 /**
  * Your CloudEvent handling function, invoked with each request.
@@ -19,18 +30,36 @@ const { CloudEvent, HTTP } = require('cloudevents');
  * @param {CloudEvent} event the CloudEvent
  */
 function handle(context, event) {
-  // YOUR CODE HERE
-  context.log.info("context");
-  context.log.info(JSON.stringify(context, null, 2));
+  if (!context.cloudevent) {
+    context.log.error('No CloudEvent received');
+    return {
+      message: 'No CloudEvent received'
+    };
+  }
 
-  context.log.info("event");
-  context.log.info(JSON.stringify(event, null, 2));
+  return new Promise((resolve, reject) => {
+    // resolve immediately with HTTP 204 No Content
+    resolve({ code: 204 });
 
-  return HTTP.binary(new CloudEvent({
-    source: 'event.handler',
-    type: 'echo',
-    data: event
-  }));
-};
+    // Now, get the latest chat updates and send a new one
+    axios.get(updates)
+    .then(response => {
+      const data = response.data
+      if (!data.ok) {
+        context.log.error(data)
+        throw new Error(data)
+      }
+      // get the most recent message and extract the chat id
+      const chat_id = data.result[0].message.chat.id;
+      context.log.info(`Updating chat ${chat_id}`)
+      // Send the event data to the chat
+      return axios.post(sendMessage, {
+        chat_id,
+        text: event.data
+      })
+    })
+    .catch(err => context.log.error(err));
+  });
+}
 
 module.exports = { handle };
