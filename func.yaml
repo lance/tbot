@@ -1,9 +1,9 @@
 version: 0.19.0
-name: viewer
+name: tbot
 namespace: ""
 runtime: node
 registry: ""
-image: quay.io/lanceball/viewer:latest
+image: quay.io/lanceball/tbot:latest
 imageDigest: sha256:d5ed7d4a58356c1f5b98219adb6690bc67f3c5db1a5220d4230c50c8b66715f0
 build: git
 git:
